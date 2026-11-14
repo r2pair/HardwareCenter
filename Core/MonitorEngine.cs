@@ -111,7 +111,10 @@ public sealed class MonitorEngine : IDisposable
         return new Snapshot(now, hardware, _disks?.Disks ?? [], _nics?.Nics ?? [], stopwatch.Elapsed.TotalMilliseconds);
     }
 
-    private static void AddCpuSpeed(List<HardwareReading> hardware, float? mhz)
+    private const string CpuSpeedName = "Average Effective Speed";
+    private string? _cpuSpeedKey;
+
+    private void AddCpuSpeed(List<HardwareReading> hardware, float? mhz)
     {
         if (mhz == null)
             return;
@@ -121,10 +124,10 @@ public sealed class MonitorEngine : IDisposable
             return;
 
         HardwareReading cpu = hardware[index];
-        var sensors = new List<SensorReading>(cpu.Sensors)
-        {
-            new($"{cpu.Key}/clock/windows|Average Effective Speed", "Average Effective Speed", SensorKind.Clock, 0, mhz),
-        };
+        _cpuSpeedKey ??= $"{cpu.Key}/clock/windows|{CpuSpeedName}";
+        var sensors = new List<SensorReading>(cpu.Sensors.Count + 1);
+        sensors.AddRange(cpu.Sensors);
+        sensors.Add(new SensorReading(_cpuSpeedKey, CpuSpeedName, SensorKind.Clock, 0, mhz));
         hardware[index] = cpu with { Sensors = sensors };
     }
 
@@ -174,9 +177,18 @@ public sealed class MonitorEngine : IDisposable
 
             RunPending();
 
-            int remaining = _intervalMs - (int)(clock.ElapsedMilliseconds - started);
-            _wake.Wait(Math.Max(50, remaining));
-            _wake.Reset();
+            // Sleep until the next pass is due. Posted work is run as it arrives without triggering an
+            // early read; a changed interval or a stop request ends the wait at once.
+            int interval = _intervalMs;
+            while (!_stopRequested && interval == _intervalMs)
+            {
+                int remaining = interval - (int)(clock.ElapsedMilliseconds - started);
+                if (remaining <= 0 || !_wake.Wait(Math.Max(1, remaining)))
+                    break;
+
+                _wake.Reset();
+                RunPending();
+            }
         }
 
         RunPending();

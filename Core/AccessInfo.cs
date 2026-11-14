@@ -103,43 +103,44 @@ public static class Elevation
 {
     public const string NoElevateSwitch = "--no-elevate";
 
-    /// <summary>Starts a new elevated copy of this app. Returns false if the user declined the UAC prompt.</summary>
-    public static bool RelaunchElevated()
-    {
-        string? exe = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(exe))
-            return false;
+    /// <summary>Tells the new copy that the one which started it is about to exit, so it should wait for it.</summary>
+    public const string RestartedSwitch = "--restarted";
 
-        try
-        {
-            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, Verb = "runas" });
-            return true;
-        }
-        catch (Win32Exception)
-        {
-            return false; // UAC prompt cancelled
-        }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-    }
+    /// <summary>
+    /// Starts a new elevated copy of this app, passing on the arguments this copy was started with
+    /// (so "start minimized" survives the hop). Returns false if the user declined the UAC prompt.
+    /// </summary>
+    public static bool RelaunchElevated(IEnumerable<string>? arguments = null) => Start(arguments, elevate: true);
 
     /// <summary>Starts a new copy of this app at the current privilege level.</summary>
-    public static bool Relaunch()
+    public static bool Relaunch() => Start([NoElevateSwitch], elevate: false);
+
+    private static bool Start(IEnumerable<string>? arguments, bool elevate)
     {
         string? exe = Environment.ProcessPath;
         if (string.IsNullOrEmpty(exe))
             return false;
 
+        var startInfo = new ProcessStartInfo(exe) { UseShellExecute = true };
+        if (elevate)
+            startInfo.Verb = "runas";
+
+        foreach (string argument in arguments ?? [])
+        {
+            if (!argument.Equals(RestartedSwitch, StringComparison.OrdinalIgnoreCase))
+                startInfo.ArgumentList.Add(argument);
+        }
+
+        startInfo.ArgumentList.Add(RestartedSwitch);
+
         try
         {
-            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, Arguments = NoElevateSwitch });
+            Process.Start(startInfo);
             return true;
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
-            return false;
+            return false; // UAC prompt cancelled, or the exe could not be started
         }
     }
 

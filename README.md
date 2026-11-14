@@ -46,6 +46,7 @@ them, but have not been tested. Reports are welcome.
 - `--minimized` starts in the notification area
 - `--report <file> [--detailed]` writes a text report and exits
 - `--no-elevate` ignores the "always start as administrator" setting once
+- `--new-instance` starts a second copy; normally a second launch just brings the first to the front
 
 Settings are stored in `%LOCALAPPDATA%\HardwareCenter`.
 

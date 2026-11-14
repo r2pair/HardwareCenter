@@ -192,6 +192,7 @@ public sealed class DeviceVM : ObservableObject
     private string? _notice;
     private bool _showDetails;
     private object? _factsSource;
+    private int _detailCount = -1;
 
     internal DeviceVM(HardwareVM hardware)
     {
@@ -260,7 +261,13 @@ public sealed class DeviceVM : ObservableObject
         Highlights.SyncTo(highlights);
         Charts.SyncTo(charts);
         Groups.SyncTo(Hardware.Groups.Where(showGroup).ToList());
-        Raise(nameof(DetailsLabel));
+
+        int detailCount = Hardware.MinorSensors.Count;
+        if (detailCount != _detailCount)
+        {
+            _detailCount = detailCount;
+            Raise(nameof(DetailsLabel));
+        }
     }
 
     private Func<SensorGroupVM, bool> UpdateCpu(MonitorContext context, List<StatVM> highlights, List<ChartVM> charts)
@@ -471,8 +478,10 @@ public sealed class DeviceVM : ObservableObject
         if (temperature != null)
             charts.Add(Chart("Temperature", temperature));
 
-        if (disk != null)
+        // Drive facts are replaced wholesale when re-read, so a new reference is the only time to rebuild.
+        if (disk != null && !ReferenceEquals(disk, _factsSource))
         {
+            _factsSource = disk;
             var parts = new List<string> { disk.Kind };
             if (disk.SizeBytes > 0)
                 parts.Add(SensorFormat.Capacity(disk.SizeBytes));
@@ -507,8 +516,9 @@ public sealed class DeviceVM : ObservableObject
 
         charts.Add(Chart("Throughput", down, b: up, labelA: "Download", labelB: "Upload", colorA: Palette.Blue));
 
-        if (Hardware.Nic is { } nic)
+        if (Hardware.Nic is { } nic && !ReferenceEquals(nic, _factsSource))
         {
+            _factsSource = nic;
             var parts = new List<string> { nic.Description };
             parts.Add(nic.IsUp ? nic.Kind : $"{nic.Kind}, disconnected");
             if (nic.IsUp && nic.SpeedBitsPerSecond > 0)

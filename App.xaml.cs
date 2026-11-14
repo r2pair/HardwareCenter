@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Threading;
 using HardwareCenter.Core;
@@ -8,35 +9,47 @@ namespace HardwareCenter;
 
 public partial class App : Application
 {
+    /// <summary>Faults survived within <see cref="ErrorWindow"/> before the app gives up.</summary>
     private const int MaxRecoverableErrors = 5;
+    private static readonly TimeSpan ErrorWindow = TimeSpan.FromMinutes(1);
+    private const long MaxErrorLogBytes = 1024 * 1024;
 
     private MainViewModel? _viewModel;
+    private Mutex? _instanceMutex;
     private int _errorCount;
+    private DateTime _firstErrorUtc;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
         // HardwareCenter.exe --report <file> [--detailed]: write a report and exit without showing a window.
-        int reportIndex = Array.FindIndex(e.Args, a => a.Equals("--report", StringComparison.OrdinalIgnoreCase));
+        int reportIndex = IndexOf(e.Args, "--report");
         if (reportIndex >= 0)
         {
             string path = reportIndex + 1 < e.Args.Length ? e.Args[reportIndex + 1] : "HardwareCenter report.txt";
-            bool detailed = e.Args.Any(a => a.Equals("--detailed", StringComparison.OrdinalIgnoreCase));
-            Shutdown(WriteReport(path, detailed));
+            Shutdown(WriteReport(path, detailed: Has(e.Args, "--detailed")));
             return;
         }
 
         DispatcherUnhandledException += OnUnhandledException;
 
+        // One window per user: a second launch brings the first to the front and exits. Without this,
+        // starting the app again while it sits in the notification area would leave two copies running.
+        if (!Has(e.Args, SingleInstance.NewInstanceSwitch) && !AcquireInstance(waitForPrevious: Has(e.Args, Elevation.RestartedSwitch)))
+        {
+            SingleInstance.ShowExisting();
+            Shutdown();
+            return;
+        }
+
         // Experimental: draw without the GPU (slightly less memory; CPU cost unclear).
-        if (e.Args.Any(a => a.Equals("--software-render", StringComparison.OrdinalIgnoreCase)))
+        if (Has(e.Args, "--software-render"))
             System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
 
-
         AppSettings settings = AppSettings.Load();
-        bool mayElevate = !e.Args.Any(a => a.Equals(Elevation.NoElevateSwitch, StringComparison.OrdinalIgnoreCase));
-        if (settings.AlwaysRunAsAdministrator && mayElevate && !AccessInfo.Detect().IsElevated && Elevation.RelaunchElevated())
+        if (settings.AlwaysRunAsAdministrator && !Has(e.Args, Elevation.NoElevateSwitch)
+            && !AccessInfo.Detect().IsElevated && Elevation.RelaunchElevated(e.Args))
         {
             Shutdown();
             return;
@@ -45,7 +58,7 @@ public partial class App : Application
         _viewModel = new MainViewModel(settings);
 
         // HardwareCenter.exe --page Thermals: open on a particular page (handy for shortcuts).
-        int pageIndex = Array.FindIndex(e.Args, a => a.Equals("--page", StringComparison.OrdinalIgnoreCase));
+        int pageIndex = IndexOf(e.Args, "--page");
         if (pageIndex >= 0 && pageIndex + 1 < e.Args.Length)
             _viewModel.SelectPage(e.Args[pageIndex + 1]);
 
@@ -53,7 +66,7 @@ public partial class App : Application
         MainWindow = window;
 
         // --minimized (used by the start-with-Windows entry): go straight to the notification area.
-        if (e.Args.Any(a => a.Equals(StartupEntry.MinimizedSwitch, StringComparison.OrdinalIgnoreCase)))
+        if (Has(e.Args, StartupEntry.MinimizedSwitch))
             window.StartInTray();
         else
             window.Show();
@@ -65,6 +78,33 @@ public partial class App : Application
     {
         _viewModel?.Dispose();
         base.OnExit(e);
+    }
+
+    private static bool Has(string[] args, string name) => IndexOf(args, name) >= 0;
+
+    private static int IndexOf(string[] args, string name) =>
+        Array.FindIndex(args, a => a.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Claims the single-instance mutex for the life of the process. After a restart (to elevate, or
+    /// to pick up a new driver) the previous copy is still shutting down, so wait for it briefly.
+    /// </summary>
+    private bool AcquireInstance(bool waitForPrevious)
+    {
+        try
+        {
+            _instanceMutex = new Mutex(false, SingleInstance.MutexName);
+            return _instanceMutex.WaitOne(waitForPrevious ? TimeSpan.FromSeconds(8) : TimeSpan.Zero);
+        }
+        catch (AbandonedMutexException)
+        {
+            return true; // the previous owner exited without releasing it; it is ours now
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or WaitHandleCannotBeOpenedException or IOException)
+        {
+            // An elevated copy owns it and this unelevated one may not even open it.
+            return false;
+        }
     }
 
     private static int WriteReport(string path, bool detailed)
@@ -86,7 +126,7 @@ public partial class App : Application
                 snapshot, engine.CollectInventory(), engine.Access,
                 detailed: detailed ? engine.GetDetailedReport() : null);
 
-            File.WriteAllText(Path.GetFullPath(path), report);
+            File.WriteAllText(Path.GetFullPath(path), report, ReportBuilder.FileEncoding);
             return 0;
         }
         catch (Exception ex)
@@ -97,20 +137,26 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// A fault while drawing or updating one view should not take the whole monitor down, so the first
-    /// few are logged and survived. Repeated faults mean something is truly broken: say so and stop.
+    /// A fault while drawing or updating one view should not take the whole monitor down, so isolated
+    /// faults are logged and survived. Several in quick succession mean something is truly broken:
+    /// say so and stop. The count starts over once a minute passes, so an app left running for days
+    /// is not closed by a handful of unrelated hiccups.
     /// </summary>
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         LogError(e.Exception);
+        e.Handled = true;
 
-        if (++_errorCount <= MaxRecoverableErrors)
+        DateTime now = DateTime.UtcNow;
+        if (now - _firstErrorUtc > ErrorWindow)
         {
-            e.Handled = true;
-            return;
+            _firstErrorUtc = now;
+            _errorCount = 0;
         }
 
-        e.Handled = true;
+        if (++_errorCount <= MaxRecoverableErrors)
+            return;
+
         MessageBox.Show(
             $"HardwareCenter ran into a problem it could not recover from and needs to close.\n\n{e.Exception.Message}\n\nDetails were saved to:\n{ErrorLogPath}",
             "HardwareCenter", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -124,7 +170,16 @@ public partial class App : Application
         try
         {
             Directory.CreateDirectory(AppSettings.DataDirectory);
-            File.AppendAllText(ErrorLogPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {exception}{Environment.NewLine}{Environment.NewLine}");
+
+            // Start the log again rather than let a repeating fault fill the disk.
+            var file = new FileInfo(ErrorLogPath);
+            if (file.Exists && file.Length > MaxErrorLogBytes)
+                file.Delete();
+
+            File.AppendAllText(
+                ErrorLogPath,
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {exception}{Environment.NewLine}{Environment.NewLine}",
+                Encoding.UTF8);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

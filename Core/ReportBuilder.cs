@@ -7,6 +7,9 @@ namespace HardwareCenter.Core;
 /// <summary>Plain-text report of the inventory and every sensor, for saving or sharing.</summary>
 public static class ReportBuilder
 {
+    /// <summary>UTF-8 with a byte-order mark, so every editor shows "°C" correctly.</summary>
+    public static Encoding FileEncoding { get; } = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
+
     public static string AppVersion =>
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 

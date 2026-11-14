@@ -52,7 +52,9 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) =>
         {
             ApplyDarkFrame();
-            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(OnWindowMessage);
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            HwndSource.FromHwnd(handle)?.AddHook(OnWindowMessage);
+            SingleInstance.AcceptShowRequests(handle);
             UpdateTrayIcon();
         };
         viewModel.SettingsPage.PropertyChanged += (_, e) =>
@@ -114,8 +116,16 @@ public partial class MainWindow : Window
 
     private IntPtr OnWindowMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (_tray?.HandleMessage(message, lParam) == true)
+        // Another copy was started: it has exited and asked this one to come forward.
+        if (message == SingleInstance.ShowMessage)
+        {
+            RestoreFromTray();
             handled = true;
+        }
+        else if (_tray?.HandleMessage(message, lParam) == true)
+        {
+            handled = true;
+        }
 
         return IntPtr.Zero;
     }

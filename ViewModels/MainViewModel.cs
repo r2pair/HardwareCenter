@@ -238,8 +238,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public Brush AccessBrush { get => _accessBrush; private set => Set(ref _accessBrush, value); }
     public string? StartupError { get => _startupError; private set => Set(ref _startupError, value); }
 
-    public bool AlwaysOnTop => Settings.AlwaysOnTop;
-
     /// <summary>The running version, shown beside the app name.</summary>
     public string VersionText => "v" + ReportBuilder.AppVersion;
 
@@ -327,6 +325,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private void Apply(Snapshot snapshot)
     {
         long ticks = snapshot.TimeUtc.Ticks;
+        bool catalogsChanged = !ReferenceEquals(snapshot.Disks, _latest?.Disks) || !ReferenceEquals(snapshot.Nics, _latest?.Nics);
         _latest = snapshot;
 
         foreach (HardwareVM hardware in _hardware)
@@ -335,16 +334,21 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         var current = new List<HardwareVM>(snapshot.Hardware.Count);
         foreach (HardwareReading reading in snapshot.Hardware)
         {
-            if (!_byKey.TryGetValue(reading.Key, out HardwareVM? hardware))
+            bool isNew = !_byKey.TryGetValue(reading.Key, out HardwareVM? hardware);
+            if (isNew)
                 _byKey[reading.Key] = hardware = new HardwareVM(reading);
 
-            hardware.MissedTicks = 0;
+            hardware!.MissedTicks = 0;
             hardware.Apply(reading, ticks, _isInBackground);
 
-            if (hardware.DiskNumber is int disk)
-                hardware.Disk = snapshot.Disks.FirstOrDefault(d => d.Number == disk);
-            if (hardware.NetworkId is string id)
-                hardware.Nic = snapshot.Nics.FirstOrDefault(n => n.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            // Drive and adapter facts are re-read every several seconds; only re-join when they were.
+            if (catalogsChanged || isNew)
+            {
+                if (hardware.DiskNumber is int disk)
+                    hardware.Disk = snapshot.Disks.FirstOrDefault(d => d.Number == disk);
+                if (hardware.NetworkId is string id)
+                    hardware.Nic = snapshot.Nics.FirstOrDefault(n => n.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            }
 
             current.Add(hardware);
         }
@@ -362,7 +366,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
 
         _hardware = current;
-        TrayText = DescribeForTray(current);
+        if (Settings.MinimizeToTray)
+            TrayText = DescribeForTray(current);
         Context.Hardware = current;
 
         // Sensors above keep recording history and min/max; the pages themselves only matter when visible.
@@ -378,16 +383,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>The overview feeds the navigation badges, so it is always current; other pages update while shown.</summary>
+    /// <summary>Updates the page being shown and the three figures beside the navigation entries.</summary>
     private void RefreshPages()
     {
-        Dashboard.Update(Context);
-        _cpuNav.Badge = Badge(Dashboard.Cpu.Primary);
-        _gpuNav.Badge = Badge(Dashboard.Gpu.Primary);
-        _memoryNav.Badge = Badge(Dashboard.Memory.Primary);
+        UpdatePage(CurrentPage);
 
-        if (!ReferenceEquals(CurrentPage, Dashboard))
-            UpdatePage(CurrentPage);
+        IReadOnlyList<HardwareVM> hardware = Context.Hardware;
+        HardwareVM? cpu = hardware.FirstOrDefault(h => h.Kind == HardwareKind.Cpu);
+        HardwareVM? gpu = Pick.PrimaryGpu(hardware);
+        HardwareVM? memory = hardware.FirstOrDefault(h => h.Key == "/ram");
+
+        _cpuNav.Badge = Badge(cpu == null ? null : Pick.CpuLoad(cpu));
+        _gpuNav.Badge = Badge(gpu == null ? null : Pick.GpuLoad(gpu));
+        _memoryNav.Badge = Badge(memory?.Find(SensorKind.Load, "Memory"));
     }
 
     private static string DescribeForTray(List<HardwareVM> hardware)
@@ -411,12 +419,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private static string Badge(StatVM stat) => stat.Text == SensorFormat.Missing ? "" : stat.Text + stat.Unit;
+    private static string Badge(SensorVM? load) =>
+        load?.Value is float value ? SensorFormat.FormatCompact(SensorKind.Load, value) : "";
 
     private void UpdatePage(object page)
     {
         switch (page)
         {
+            case DashboardVM dashboard:
+                dashboard.Update(Context);
+                break;
             case DevicePageVM devices:
                 devices.Update(Context);
                 break;
@@ -569,27 +581,24 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            string text = ReportBuilder.Build(_latest, Context.Inventory, Context.Access, LookupRange, detailed);
-            File.WriteAllText(path, text);
+            // One pass over the sensors up front, rather than a search per report line.
+            var ranges = new Dictionary<string, (float? Min, float? Max)>(StringComparer.Ordinal);
+            foreach (HardwareVM hardware in _hardware)
+            {
+                foreach (SensorVM sensor in hardware.Sensors)
+                    ranges[sensor.Key] = (sensor.Min, sensor.Max);
+            }
+
+            string text = ReportBuilder.Build(
+                _latest, Context.Inventory, Context.Access,
+                key => ranges.TryGetValue(key, out (float? Min, float? Max) range) ? range : (null, null),
+                detailed);
+            File.WriteAllText(path, text, ReportBuilder.FileEncoding);
             SettingsPage.Status = $"Report saved to {path}";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             SettingsPage.Status = $"Could not save the report: {ex.Message}";
         }
-    }
-
-    private (float? Min, float? Max) LookupRange(string sensorKey)
-    {
-        foreach (HardwareVM hardware in _hardware)
-        {
-            foreach (SensorVM sensor in hardware.Sensors)
-            {
-                if (sensor.Key == sensorKey)
-                    return (sensor.Min, sensor.Max);
-            }
-        }
-
-        return (null, null);
     }
 }
