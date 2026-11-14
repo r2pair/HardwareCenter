@@ -1,0 +1,200 @@
+<UserControl x:Class="HardwareCenter.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:HardwareCenter.Controls">
+
+    <UserControl.Resources>
+        <!-- A setting: name and one line of explanation. -->
+        <Style x:Key="SettingName" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+        </Style>
+        <Style x:Key="SettingHelp" TargetType="TextBlock" BasedOn="{StaticResource T.Muted}">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextTrimming" Value="None" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+        <Style x:Key="Divider" TargetType="Border">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Background" Value="{StaticResource B.Border}" />
+            <Setter Property="Margin" Value="0,13" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer Style="{StaticResource PageScroll}">
+        <StackPanel Margin="28,4,18,28" MaxWidth="760" HorizontalAlignment="Left">
+
+            <!-- ============ Sensor access ============ -->
+            <TextBlock Text="SENSOR ACCESS" Style="{StaticResource T.Section}" Margin="2,2,0,10" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel>
+                        <Ellipse Width="9" Height="9" Fill="{Binding DataContext.AccessBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                 VerticalAlignment="Center" Margin="1,1,10,0" />
+                        <TextBlock Text="{Binding AccessTitle}" Style="{StaticResource T.Title}" FontSize="14" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding AccessDetail}" Style="{StaticResource T.Body}" Margin="0,7,0,0" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,13,0,0">
+                        <Button Style="{StaticResource Btn.Primary}" Command="{Binding RestartAsAdminCommand}" Margin="0,0,8,0"
+                                Visibility="{Binding CanElevate, Converter={StaticResource VisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <c:Icon Width="14" Height="14" Data="{StaticResource Icon.Shield}" StrokeThickness="2" VerticalAlignment="Center" />
+                                <TextBlock Text="Restart as administrator" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource Btn}" Content="Install PawnIO driver" Command="{Binding InstallDriverCommand}" Margin="0,0,8,0"
+                                ToolTip="Runs: winget install namazso.PawnIO"
+                                Visibility="{Binding CanInstallDriver, Converter={StaticResource VisibilityConverter}}" />
+                        <Button Style="{StaticResource Btn.Ghost}" Content="About PawnIO" Command="{Binding OpenDriverSiteCommand}" ToolTip="Opens pawnio.eu" />
+                    </StackPanel>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AlwaysRunAsAdministrator, Mode=TwoWay}">
+                        <StackPanel>
+                            <TextBlock Text="Always start as administrator" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Windows will ask for permission each time HardwareCenter starts." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ Display ============ -->
+            <TextBlock Text="DISPLAY" Style="{StaticResource T.Section}" Margin="2,24,0,10" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Update interval" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="How often sensors are read. Shorter intervals use a little more CPU." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Style="{StaticResource SegmentWell}" Margin="20,0,0,0">
+                            <ListBox Style="{StaticResource SegmentList}" ItemsSource="{Binding Intervals}" DisplayMemberPath="Label"
+                                     SelectedItem="{Binding SelectedInterval, Mode=TwoWay}" />
+                        </Border>
+                    </Grid>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Temperature unit" Style="{StaticResource SettingName}" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Style="{StaticResource SegmentWell}" Margin="20,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Style="{StaticResource Segment}" Content="°C" GroupName="TemperatureUnit" IsChecked="{Binding UseCelsius, Mode=TwoWay}" />
+                                <RadioButton Style="{StaticResource Segment}" Content="°F" GroupName="TemperatureUnit" IsChecked="{Binding UseFahrenheit, Mode=TwoWay}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AlwaysOnTop, Mode=TwoWay}">
+                        <StackPanel>
+                            <TextBlock Text="Keep window on top" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Stay visible above other windows, for watching readings while you work or play." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                    </CheckBox>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MinimizeToTray, Mode=TwoWay}">
+                        <StackPanel>
+                            <TextBlock Text="Minimize to the notification area" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Keep an icon beside the clock showing CPU and GPU load and temperature. Minimizing hides the window there." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                    </CheckBox>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartWithWindows, Mode=TwoWay}">
+                        <StackPanel>
+                            <TextBlock Text="Start with Windows" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Start minimized when you sign in." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                    </CheckBox>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding ShowInactiveAdapters, Mode=TwoWay}">
+                        <StackPanel>
+                            <TextBlock Text="Show inactive network adapters" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Include disconnected and virtual adapters that have carried no traffic." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- ============ Data ============ -->
+            <TextBlock Text="DATA" Style="{StaticResource T.Section}" Margin="2,24,0,10" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Hardware report" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Save the inventory and every sensor reading to a text file, for records or troubleshooting." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource Btn}" Command="{Binding ExportReportCommand}" Margin="20,0,0,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <c:Icon Width="14" Height="14" Data="{StaticResource Icon.Export}" StrokeThickness="2" VerticalAlignment="Center" />
+                                <TextBlock Text="Save report…" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Minimum and maximum values" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Recorded since HardwareCenter started. Reset to begin again from the current readings." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource Btn}" Command="{Binding ResetRangesCommand}" Margin="20,0,0,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <c:Icon Width="13" Height="13" Data="{StaticResource Icon.Reset}" StrokeThickness="2.1" VerticalAlignment="Center" />
+                                <TextBlock Text="Reset min / max" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Text="{Binding Status}" Style="{StaticResource T.Body}" Margin="0,13,0,0"
+                               Visibility="{Binding Status, Converter={StaticResource VisibilityConverter}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- ============ About ============ -->
+            <TextBlock Text="ABOUT" Style="{StaticResource T.Section}" Margin="2,24,0,10" />
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <c:ArcGauge Width="26" Height="23" Value="0.7" Color="{StaticResource C.Blue}" Thickness="3.6" VerticalAlignment="Center" />
+                        <StackPanel Margin="12,0,0,0">
+                            <TextBlock Text="HardwareCenter" Style="{StaticResource T.Title}" FontSize="14" />
+                            <TextBlock Text="{Binding Version}" Style="{StaticResource T.Muted}" Margin="0,1,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource T.Body}" Margin="0,12,0,0"
+                               Text="Sensor readings come from LibreHardwareMonitorLib (MPL-2.0), the open-source library behind Libre Hardware Monitor, with low-level access provided by the PawnIO driver. Drive and CPU-speed readings available without administrator rights come directly from Windows." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,223 @@
+<UserControl x:Class="HardwareCenter.Views.DevicePageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:HardwareCenter.Controls"
+             xmlns:vm="clr-namespace:HardwareCenter.ViewModels">
+
+    <UserControl.Resources>
+
+        <!-- Every device of the page's category, one after another. -->
+        <DataTemplate x:Key="Device" DataType="{x:Type vm:DeviceVM}">
+            <StackPanel Margin="0,0,0,30">
+
+                <!-- Name and specification line -->
+                <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource IconChip}" Width="40" Height="40" CornerRadius="11" Background="{Binding AccentTint}">
+                        <c:Icon Width="21" Height="21" Data="{Binding Hardware.IconKey, Converter={StaticResource IconConverter}}"
+                                Foreground="{Binding AccentBrush}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="13,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Hardware.Name}" Style="{StaticResource T.DeviceTitle}" />
+                        <TextBlock Text="{Binding Subtitle}" Style="{StaticResource T.Label}" Margin="0,2,0,0"
+                                   Visibility="{Binding Subtitle, Converter={StaticResource VisibilityConverter}}" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Explanation for a device with nothing to show -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="16,12"
+                        Visibility="{Binding Notice, Converter={StaticResource VisibilityConverter}}">
+                    <DockPanel>
+                        <c:Icon Width="16" Height="16" Data="{StaticResource Icon.Info}" Foreground="{StaticResource B.Text3}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding Notice}" Style="{StaticResource T.Body}" Margin="11,0,0,0" />
+                    </DockPanel>
+                </Border>
+
+                <!-- Headline figures -->
+                <ItemsControl ItemsSource="{Binding Highlights}" ItemTemplate="{StaticResource StatTile}" Focusable="False" Margin="-6,0,-6,12"
+                              Visibility="{Binding Highlights.Count, Converter={StaticResource VisibilityConverter}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <!-- History -->
+                <ItemsControl ItemsSource="{Binding Charts}" ItemTemplate="{StaticResource ChartCard}" Focusable="False" Margin="-6,0,-6,12"
+                              Visibility="{Binding Charts.Count, Converter={StaticResource VisibilityConverter}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <!-- Per-thread load -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="18,13,14,12"
+                        Visibility="{Binding Threads.Count, Converter={StaticResource VisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Load per thread" Style="{StaticResource T.Title}" Margin="0,0,0,8" />
+                        <ItemsControl ItemsSource="{Binding Threads}" Focusable="False" Margin="-4,0,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:SensorVM}">
+                                    <Border Margin="4" Padding="9,7,9,9" CornerRadius="8" Background="{StaticResource B.Inset}" ToolTipService.InitialShowDelay="350">
+                                        <Border.ToolTip>
+                                            <ToolTip Content="{Binding}" ContentTemplate="{StaticResource SensorTip}" />
+                                        </Border.ToolTip>
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding CompactText}" Style="{StaticResource T.RowValue}" FontSize="12" />
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource ThreadLabelConverter}}" Style="{StaticResource T.Muted}" />
+                                            </DockPanel>
+                                            <c:MeterBar Height="4" Margin="0,7,0,0" Value="{Binding Fraction}" Color="{Binding MeterColor}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Installed memory modules -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="18,13,18,10"
+                        Visibility="{Binding Modules.Count, Converter={StaticResource VisibilityConverter}}">
+                    <StackPanel Grid.IsSharedSizeScope="True">
+                        <TextBlock Text="Installed modules" Style="{StaticResource T.Title}" Margin="0,0,0,6" />
+                        <ItemsControl ItemsSource="{Binding Modules}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ModuleRow}">
+                                    <Grid MinHeight="29">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="Slot" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="Size" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="Kind" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="Maker" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Slot}" Style="{StaticResource T.Label}" VerticalAlignment="Center" Margin="0,0,28,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Size}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,28,0" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Kind}" FontSize="12.5" VerticalAlignment="Center" Margin="0,0,28,0" />
+                                        <TextBlock Grid.Column="3" Text="{Binding Maker}" Style="{StaticResource T.Label}" VerticalAlignment="Center" Margin="0,0,28,0" />
+                                        <TextBlock Grid.Column="4" Text="{Binding Part}" Style="{StaticResource T.Label}" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Volumes on a drive -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12" Padding="18,13,18,8"
+                        Visibility="{Binding Volumes.Count, Converter={StaticResource VisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Volumes" Style="{StaticResource T.Title}" Margin="0,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding Volumes}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:VolumeRow}">
+                                    <StackPanel Margin="0,7,0,9">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource T.RowValue}" Margin="10,0,0,0">
+                                                <Run Text="{Binding Percent, Mode=OneWay}" /> <Run Text="used" Foreground="{StaticResource B.Text3}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
+                                        <c:MeterBar Margin="0,9,0,7" Value="{Binding Fraction}" Color="{Binding Color}" />
+                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource T.Muted}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Static facts -->
+                <ItemsControl ItemsSource="{Binding Facts}" Focusable="False" Margin="-6,0,-6,6"
+                              Visibility="{Binding Facts.Count, Converter={StaticResource VisibilityConverter}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:FactRow}">
+                            <Border Margin="6,0,6,6" Padding="12,7,13,8" CornerRadius="9" Background="{StaticResource B.Card}"
+                                    BorderBrush="{StaticResource B.Border}" BorderThickness="1">
+                                <TextBlock FontSize="12.5">
+                                    <Run Text="{Binding Label, Mode=OneWay}" Foreground="{StaticResource B.Text3}" /><Run Text="  " /><Run
+                                         Text="{Binding Value, Mode=OneWay}" Foreground="{StaticResource B.Text}" />
+                                </TextBlock>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Everything else the device reports, grouped by what it measures -->
+                <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource SensorGroupCard}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <c:CardGrid MinColumnWidth="300" MaxColumns="3" Gap="12" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <!-- Detail-level sensors, folded away by default -->
+                <StackPanel Visibility="{Binding Hardware.MinorSensors.Count, Converter={StaticResource VisibilityConverter}}" Margin="0,10,0,0">
+                    <ToggleButton IsChecked="{Binding ShowDetails, Mode=TwoWay}" HorizontalAlignment="Left" Cursor="Hand" Focusable="True">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="8,6,12,7">
+                                    <StackPanel Orientation="Horizontal">
+                                        <c:Icon x:Name="Chevron" Width="13" Height="13" Data="{StaticResource Icon.ChevronRight}" StrokeThickness="2.2"
+                                                Foreground="{StaticResource B.Text3}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding DetailsLabel}" Style="{StaticResource T.Label}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource B.Hover}" />
+                                    </Trigger>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="Chevron" Property="Data" Value="{StaticResource Icon.ChevronDown}" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                    </ToggleButton>
+                    <Border Style="{StaticResource Card}" Margin="0,6,0,0" Padding="18,8,18,8"
+                            Visibility="{Binding ShowDetails, Converter={StaticResource VisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding Hardware.MinorSensors}" ItemTemplate="{StaticResource SensorRow}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="2" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Margin" Value="0,0,28,0" />
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                        </ItemsControl>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+    </UserControl.Resources>
+
+    <ScrollViewer x:Name="Scroll" Style="{StaticResource PageScroll}">
+        <StackPanel Margin="28,4,18,8">
+            <TextBlock Text="{Binding EmptyText}" Style="{StaticResource T.Body}" Margin="0,8,0,0"
+                       Visibility="{Binding IsEmpty, Converter={StaticResource VisibilityConverter}}" />
+            <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource Device}" Focusable="False" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

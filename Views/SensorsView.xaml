@@ -1,0 +1,165 @@
+<UserControl x:Class="HardwareCenter.Views.SensorsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:HardwareCenter.Controls"
+             xmlns:vm="clr-namespace:HardwareCenter.ViewModels">
+
+    <UserControl.Resources>
+
+        <!-- Column widths shared by the header and every row. -->
+        <GridLength x:Key="ValueColumn">112</GridLength>
+        <GridLength x:Key="RangeColumn">104</GridLength>
+        <GridLength x:Key="TrendColumn">132</GridLength>
+
+        <!-- Device heading: click to fold. -->
+        <DataTemplate DataType="{x:Type vm:SensorDeviceRow}">
+            <Button Command="{Binding ToggleCommand}" Cursor="Hand" Margin="0,10,0,2" HorizontalContentAlignment="Stretch">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{StaticResource B.Card}" BorderBrush="{StaticResource B.Border}" BorderThickness="1"
+                                CornerRadius="9" Padding="10,8,14,9">
+                            <DockPanel>
+                                <c:Icon x:Name="Chevron" Width="13" Height="13" Data="{StaticResource Icon.ChevronRight}" StrokeThickness="2.2"
+                                        Foreground="{StaticResource B.Text3}" VerticalAlignment="Center" />
+                                <c:Icon Width="16" Height="16" Margin="10,0,0,0" VerticalAlignment="Center"
+                                        Data="{Binding Hardware.IconKey, Converter={StaticResource IconConverter}}"
+                                        Foreground="{Binding Hardware.AccentColor, Converter={StaticResource ColorBrushConverter}}" />
+                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource T.Muted}" VerticalAlignment="Center" Margin="12,0,0,0">
+                                    <Run Text="{Binding Hardware.Sensors.Count, Mode=OneWay}" /> <Run Text="sensors" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Hardware.Name}" Style="{StaticResource T.Title}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource B.Raised}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                <Setter TargetName="Chevron" Property="Data" Value="{StaticResource Icon.ChevronDown}" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:SensorKindRow}">
+            <TextBlock Text="{Binding Title}" Style="{StaticResource T.Section}" Margin="40,10,0,3" />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:SensorVM}">
+            <Border x:Name="Row" CornerRadius="6" Background="Transparent" Padding="40,0,6,0" Height="30">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="{StaticResource ValueColumn}" />
+                        <ColumnDefinition Width="{StaticResource RangeColumn}" />
+                        <ColumnDefinition Width="{StaticResource RangeColumn}" />
+                        <ColumnDefinition Width="{StaticResource TrendColumn}" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="{StaticResource B.Text2}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource AlertPill}" Focusable="False"
+                                    Visibility="{Binding IsAlert, Converter={StaticResource VisibilityConverter}}" />
+                    <TextBlock Grid.Column="2" Text="{Binding ValueText}" Style="{StaticResource T.RowValue}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="{Binding MinText}" Style="{StaticResource T.RowValue}" Foreground="{StaticResource B.Text2}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Text="{Binding MaxText}" Style="{StaticResource T.RowValue}" Foreground="{StaticResource B.Text2}" VerticalAlignment="Center" />
+                    <c:TrendChart Grid.Column="5" Source="{Binding}" Stroke="{Binding Owner.AccentColor}" WindowSeconds="120"
+                                  Height="20" Margin="22,0,0,0" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Row" Property="Background" Value="{StaticResource B.Hover}" />
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <Style x:Key="PlainItem" TargetType="ListBoxItem">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </UserControl.Resources>
+
+    <Grid Margin="28,4,18,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Search and list actions -->
+        <DockPanel Margin="0,2,10,12">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource Btn.Ghost}" Content="Expand all" Command="{Binding ExpandAllCommand}" VerticalAlignment="Center" />
+                <Button Style="{StaticResource Btn.Ghost}" Content="Collapse all" Command="{Binding CollapseAllCommand}" Margin="2,0,0,0" VerticalAlignment="Center" />
+                <Button Style="{StaticResource Btn}" Command="{Binding ResetRangesCommand}" Margin="10,0,0,0" VerticalAlignment="Center"
+                        AutomationProperties.Name="Reset min / max"
+                        ToolTip="Start the minimum and maximum columns again from the current values">
+                    <StackPanel Orientation="Horizontal">
+                        <c:Icon Width="13" Height="13" Data="{StaticResource Icon.Reset}" StrokeThickness="2.1" VerticalAlignment="Center" />
+                        <TextBlock Text="Reset min / max" Margin="8,0,0,0" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <Grid Width="270" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBox x:Name="FilterBox" Style="{StaticResource SearchBox}" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="Filter sensors" />
+                <c:Icon Width="14" Height="14" Data="{StaticResource Icon.Search}" StrokeThickness="2" Foreground="{StaticResource B.Text3}"
+                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False" />
+                <TextBlock Text="Filter sensors" Style="{StaticResource T.Label}" Foreground="{StaticResource B.Text3}" Margin="34,0,0,1"
+                           VerticalAlignment="Center" IsHitTestVisible="False"
+                           Visibility="{Binding HasFilter, Converter={StaticResource VisibilityConverter}, ConverterParameter=invert}" />
+                <Button Style="{StaticResource Btn.Ghost}" Command="{Binding ClearFilterCommand}" Padding="6" Margin="0,0,4,0"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="Clear" AutomationProperties.Name="Clear filter"
+                        Visibility="{Binding HasFilter, Converter={StaticResource VisibilityConverter}}">
+                    <c:Icon Width="11" Height="11" Data="{StaticResource Icon.Close}" StrokeThickness="2.4" />
+                </Button>
+            </Grid>
+
+            <TextBlock Text="{Binding Summary}" Style="{StaticResource T.Muted}" Margin="14,0,0,0" VerticalAlignment="Center" />
+        </DockPanel>
+
+        <!-- Column headings, aligned with the rows below (the right margin matches the list's scroll bar) -->
+        <Grid Grid.Row="1" Margin="40,0,16,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="{StaticResource ValueColumn}" />
+                <ColumnDefinition Width="{StaticResource RangeColumn}" />
+                <ColumnDefinition Width="{StaticResource RangeColumn}" />
+                <ColumnDefinition Width="{StaticResource TrendColumn}" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="SENSOR" Style="{StaticResource T.Section}" />
+            <TextBlock Grid.Column="1" Text="VALUE" Style="{StaticResource T.Section}" TextAlignment="Right" />
+            <TextBlock Grid.Column="2" Text="MIN" Style="{StaticResource T.Section}" TextAlignment="Right" />
+            <TextBlock Grid.Column="3" Text="MAX" Style="{StaticResource T.Section}" TextAlignment="Right" />
+            <TextBlock Grid.Column="4" Text="LAST 2 MIN" Style="{StaticResource T.Section}" Margin="22,0,0,0" />
+        </Grid>
+
+        <ListBox Grid.Row="2" ItemsSource="{Binding Rows}" ItemContainerStyle="{StaticResource PlainItem}"
+                 Background="Transparent" BorderThickness="0" Padding="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Visible"
+                 ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel">
+            <ListBox.Template>
+                <ControlTemplate TargetType="ListBox">
+                    <ScrollViewer Focusable="False" Padding="0">
+                        <ItemsPresenter />
+                    </ScrollViewer>
+                </ControlTemplate>
+            </ListBox.Template>
+        </ListBox>
+
+        <TextBlock Grid.Row="2" Text="No sensors match the filter." Style="{StaticResource T.Body}" Margin="2,14,0,0" VerticalAlignment="Top"
+                   Visibility="{Binding IsEmpty, Converter={StaticResource VisibilityConverter}}" />
+    </Grid>
+</UserControl>
