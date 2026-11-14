@@ -78,7 +78,10 @@ internal sealed class LhmSource : IDisposable
     // building the identifier strings alone was a large share of the per-second garbage.
     private sealed record HardwareFacts(string Key, HardwareKind Kind, string? Vendor, int? DiskNumber, string? NetworkId);
 
-    private sealed record SensorFacts(string Key, SensorKind Kind, bool IsMinor, bool IsFrameRate);
+    private sealed record SensorFacts(string Key, SensorKind Kind, bool IsMinor, bool IsFrameRate, bool IsDecimalGigabytes);
+
+    /// <summary>The library reports drive space in units of 1000³ bytes; everything else here counts in 1024s.</summary>
+    private const float DecimalToBinaryGigabytes = 1e9f / (1024f * 1024f * 1024f);
 
     private readonly Dictionary<IHardware, HardwareFacts> _hardwareFacts = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<ISensor, SensorFacts> _sensorFacts = new(ReferenceEqualityComparer.Instance);
@@ -261,7 +264,8 @@ internal sealed class LhmSource : IDisposable
                     Unique($"{sensor.Identifier}|{initialName}"),
                     sensorKind,
                     facts.Kind == HardwareKind.Gpu && initialName.StartsWith("D3D ", StringComparison.Ordinal),
-                    initialName.Contains("FPS", StringComparison.OrdinalIgnoreCase));
+                    initialName.Contains("FPS", StringComparison.OrdinalIgnoreCase),
+                    facts.Kind == HardwareKind.Storage && sensorKind == SensorKind.Data && initialName is "Free Space" or "Total Space");
                 _sensorFacts.Add(sensor, sensorFacts);
             }
 
@@ -276,6 +280,10 @@ internal sealed class LhmSource : IDisposable
             // The library reports -1 while no fullscreen application is running.
             if (value < 0 && sensorFacts.IsFrameRate)
                 value = null;
+
+            // So free and total space agree with the figures Windows and the rest of the app show.
+            if (sensorFacts.IsDecimalGigabytes)
+                value *= DecimalToBinaryGigabytes;
 
             readings.Add(new SensorReading(
                 sensorFacts.Key, sensor.Name ?? sensorFacts.Kind.ToString(), sensorFacts.Kind, sensor.Index, value, sensorFacts.IsMinor));

@@ -12,6 +12,7 @@ public sealed class AppSettings
     public bool AlwaysOnTop { get; set; }
     public bool ShowInactiveAdapters { get; set; }
     public bool MinimizeToTray { get; set; } = true;
+    public bool AnimateGauges { get; set; } = true;
 
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }

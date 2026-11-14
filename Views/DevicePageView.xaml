@@ -214,10 +214,12 @@
     </UserControl.Resources>
 
     <ScrollViewer x:Name="Scroll" Style="{StaticResource PageScroll}">
+        <c:WidthCap>
         <StackPanel Margin="28,4,18,8">
             <TextBlock Text="{Binding EmptyText}" Style="{StaticResource T.Body}" Margin="0,8,0,0"
                        Visibility="{Binding IsEmpty, Converter={StaticResource VisibilityConverter}}" />
             <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource Device}" Focusable="False" />
         </StackPanel>
+        </c:WidthCap>
     </ScrollViewer>
 </UserControl>

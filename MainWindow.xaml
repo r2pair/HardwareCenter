@@ -57,7 +57,7 @@
                     </StackPanel>
 
                     <StackPanel DockPanel.Dock="Bottom" Margin="10,6,10,12">
-                        <RadioButton Style="{StaticResource NavRadio}" Content="{Binding SettingsNav}"
+                        <RadioButton Style="{StaticResource NavRadio}" Content="{Binding SettingsNav}" TabIndex="1"
                                      IsChecked="{Binding IsSettingsSelected, Mode=TwoWay}" />
                         <Border Margin="3,10,3,0" Padding="11,8" CornerRadius="9" Background="{StaticResource B.Inset}"
                                 BorderBrush="{StaticResource B.Border}" BorderThickness="1">
@@ -69,7 +69,7 @@
                         </Border>
                     </StackPanel>
 
-                    <ListBox Style="{StaticResource NavList}" Margin="10,0" ItemsSource="{Binding Nav}"
+                    <ListBox Style="{StaticResource NavList}" Margin="10,0" ItemsSource="{Binding Nav}" TabIndex="0"
                              SelectedItem="{Binding SelectedListItem}" AutomationProperties.Name="Pages" />
                 </DockPanel>
             </Border>
@@ -95,7 +95,8 @@
                 </StackPanel>
 
                 <!-- Why some sensors are missing, with the one action that fixes it. -->
-                <Border Grid.Row="1" Margin="28,2,28,12" Padding="14,10,8,10" CornerRadius="10"
+                <c:WidthCap Grid.Row="1">
+                <Border Margin="28,2,28,12" Padding="14,10,8,10" CornerRadius="10"
                         Background="{StaticResource B.WarningTint}" BorderBrush="#33FAB219" BorderThickness="1"
                         Visibility="{Binding ShowBanner, Converter={StaticResource VisibilityConverter}}">
                     <Grid>
@@ -119,6 +120,7 @@
                         </Button>
                     </Grid>
                 </Border>
+                </c:WidthCap>
 
                 <ContentControl x:Name="PageHost" Grid.Row="2" Content="{Binding CurrentPage}" Focusable="False">
                     <ContentControl.RenderTransform>

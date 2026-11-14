@@ -75,6 +75,7 @@
     </UserControl.Resources>
 
     <ScrollViewer Style="{StaticResource PageScroll}">
+        <c:WidthCap>
         <StackPanel Margin="28,4,18,28">
 
             <ItemsControl ItemsSource="{Binding Heroes}" ItemTemplate="{StaticResource HeroTile}" Focusable="False" Margin="-8,0">
@@ -196,5 +197,6 @@
 
             </c:CardGrid>
         </StackPanel>
+        </c:WidthCap>
     </ScrollViewer>
 </UserControl>

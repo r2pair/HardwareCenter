@@ -13,7 +13,7 @@
 
         <!-- Device heading: click to fold. -->
         <DataTemplate DataType="{x:Type vm:SensorDeviceRow}">
-            <Button Command="{Binding ToggleCommand}" Cursor="Hand" Margin="0,10,0,2" HorizontalContentAlignment="Stretch">
+            <Button Command="{Binding ToggleCommand}" Cursor="Hand" AutomationProperties.Name="{Binding Hardware.Name}" Margin="0,10,0,2" HorizontalContentAlignment="Stretch">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{StaticResource B.Card}" BorderBrush="{StaticResource B.Border}" BorderThickness="1"
@@ -89,6 +89,7 @@
 
     </UserControl.Resources>
 
+    <c:WidthCap>
     <Grid Margin="28,4,18,12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -99,9 +100,9 @@
         <!-- Search and list actions -->
         <DockPanel Margin="0,2,10,12">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Style="{StaticResource Btn.Ghost}" Content="Expand all" Command="{Binding ExpandAllCommand}" VerticalAlignment="Center" />
-                <Button Style="{StaticResource Btn.Ghost}" Content="Collapse all" Command="{Binding CollapseAllCommand}" Margin="2,0,0,0" VerticalAlignment="Center" />
-                <Button Style="{StaticResource Btn}" Command="{Binding ResetRangesCommand}" Margin="10,0,0,0" VerticalAlignment="Center"
+                <Button Style="{StaticResource Btn.Ghost}" Content="Expand all" Command="{Binding ExpandAllCommand}" TabIndex="3" VerticalAlignment="Center" />
+                <Button Style="{StaticResource Btn.Ghost}" Content="Collapse all" Command="{Binding CollapseAllCommand}" TabIndex="3" Margin="2,0,0,0" VerticalAlignment="Center" />
+                <Button Style="{StaticResource Btn}" Command="{Binding ResetRangesCommand}" Margin="10,0,0,0" VerticalAlignment="Center" TabIndex="3"
                         AutomationProperties.Name="Reset min / max"
                         ToolTip="Start the minimum and maximum columns again from the current values">
                     <StackPanel Orientation="Horizontal">
@@ -112,7 +113,7 @@
             </StackPanel>
 
             <Grid Width="270" HorizontalAlignment="Left" VerticalAlignment="Center">
-                <TextBox x:Name="FilterBox" Style="{StaticResource SearchBox}" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox x:Name="FilterBox" Style="{StaticResource SearchBox}" TabIndex="2" Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
                          AutomationProperties.Name="Filter sensors" />
                 <c:Icon Width="14" Height="14" Data="{StaticResource Icon.Search}" StrokeThickness="2" Foreground="{StaticResource B.Text3}"
                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="11,0,0,0" IsHitTestVisible="False" />
@@ -145,7 +146,7 @@
             <TextBlock Grid.Column="4" Text="LAST 2 MIN" Style="{StaticResource T.Section}" Margin="22,0,0,0" />
         </Grid>
 
-        <ListBox Grid.Row="2" ItemsSource="{Binding Rows}" ItemContainerStyle="{StaticResource PlainItem}"
+        <ListBox Grid.Row="2" ItemsSource="{Binding Rows}" ItemContainerStyle="{StaticResource PlainItem}" KeyboardNavigation.TabNavigation="Continue"
                  Background="Transparent" BorderThickness="0" Padding="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Visible"
                  ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
@@ -162,4 +163,5 @@
         <TextBlock Grid.Row="2" Text="No sensors match the filter." Style="{StaticResource T.Body}" Margin="2,14,0,0" VerticalAlignment="Top"
                    Visibility="{Binding IsEmpty, Converter={StaticResource VisibilityConverter}}" />
     </Grid>
+    </c:WidthCap>
 </UserControl>

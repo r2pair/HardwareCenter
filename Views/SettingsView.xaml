@@ -36,7 +36,7 @@
                     <TextBlock Text="{Binding AccessDetail}" Style="{StaticResource T.Body}" Margin="0,7,0,0" />
 
                     <StackPanel Orientation="Horizontal" Margin="0,13,0,0">
-                        <Button Style="{StaticResource Btn.Primary}" Command="{Binding RestartAsAdminCommand}" Margin="0,0,8,0"
+                        <Button Style="{StaticResource Btn.Primary}" Command="{Binding RestartAsAdminCommand}" Margin="0,0,8,0" AutomationProperties.Name="Restart as administrator"
                                 Visibility="{Binding CanElevate, Converter={StaticResource VisibilityConverter}}">
                             <StackPanel Orientation="Horizontal">
                                 <c:Icon Width="14" Height="14" Data="{StaticResource Icon.Shield}" StrokeThickness="2" VerticalAlignment="Center" />
@@ -51,7 +51,7 @@
 
                     <Border Style="{StaticResource Divider}" />
 
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AlwaysRunAsAdministrator, Mode=TwoWay}">
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AlwaysRunAsAdministrator, Mode=TwoWay}" AutomationProperties.Name="Always start as administrator">
                         <StackPanel>
                             <TextBlock Text="Always start as administrator" Style="{StaticResource SettingName}" />
                             <TextBlock Text="Windows will ask for permission each time HardwareCenter starts." Style="{StaticResource SettingHelp}" />
@@ -75,7 +75,7 @@
                         </StackPanel>
                         <Border Grid.Column="1" Style="{StaticResource SegmentWell}" Margin="20,0,0,0">
                             <ListBox Style="{StaticResource SegmentList}" ItemsSource="{Binding Intervals}" DisplayMemberPath="Label"
-                                     SelectedItem="{Binding SelectedInterval, Mode=TwoWay}" />
+                                     SelectedItem="{Binding SelectedInterval, Mode=TwoWay}" AutomationProperties.Name="Update interval" />
                         </Border>
                     </Grid>
 
@@ -90,7 +90,8 @@
                             <TextBlock Text="Temperature unit" Style="{StaticResource SettingName}" />
                         </StackPanel>
                         <Border Grid.Column="1" Style="{StaticResource SegmentWell}" Margin="20,0,0,0">
-                            <StackPanel Orientation="Horizontal">
+                            <!-- One Tab stop for the pair; arrow keys switch between them. -->
+                            <StackPanel Orientation="Horizontal" KeyboardNavigation.TabNavigation="Once" KeyboardNavigation.DirectionalNavigation="Cycle">
                                 <RadioButton Style="{StaticResource Segment}" Content="°C" GroupName="TemperatureUnit" IsChecked="{Binding UseCelsius, Mode=TwoWay}" />
                                 <RadioButton Style="{StaticResource Segment}" Content="°F" GroupName="TemperatureUnit" IsChecked="{Binding UseFahrenheit, Mode=TwoWay}" />
                             </StackPanel>
@@ -99,7 +100,7 @@
 
                     <Border Style="{StaticResource Divider}" />
 
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AlwaysOnTop, Mode=TwoWay}">
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AlwaysOnTop, Mode=TwoWay}" AutomationProperties.Name="Keep window on top">
                         <StackPanel>
                             <TextBlock Text="Keep window on top" Style="{StaticResource SettingName}" />
                             <TextBlock Text="Stay visible above other windows, for watching readings while you work or play." Style="{StaticResource SettingHelp}" />
@@ -108,7 +109,16 @@
 
                     <Border Style="{StaticResource Divider}" />
 
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MinimizeToTray, Mode=TwoWay}">
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AnimateGauges, Mode=TwoWay}" AutomationProperties.Name="Animate gauges">
+                        <StackPanel>
+                            <TextBlock Text="Animate gauges" Style="{StaticResource SettingName}" />
+                            <TextBlock Text="Gauges and meters glide to new values. Turn off to have them jump instantly and use slightly less CPU." Style="{StaticResource SettingHelp}" />
+                        </StackPanel>
+                    </CheckBox>
+
+                    <Border Style="{StaticResource Divider}" />
+
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MinimizeToTray, Mode=TwoWay}" AutomationProperties.Name="Minimize to the notification area">
                         <StackPanel>
                             <TextBlock Text="Minimize to the notification area" Style="{StaticResource SettingName}" />
                             <TextBlock Text="Keep an icon beside the clock showing CPU and GPU load and temperature. Minimizing hides the window there." Style="{StaticResource SettingHelp}" />
@@ -117,7 +127,7 @@
 
                     <Border Style="{StaticResource Divider}" />
 
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartWithWindows, Mode=TwoWay}">
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartWithWindows, Mode=TwoWay}" AutomationProperties.Name="Start with Windows">
                         <StackPanel>
                             <TextBlock Text="Start with Windows" Style="{StaticResource SettingName}" />
                             <TextBlock Text="Start minimized when you sign in." Style="{StaticResource SettingHelp}" />
@@ -126,7 +136,7 @@
 
                     <Border Style="{StaticResource Divider}" />
 
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding ShowInactiveAdapters, Mode=TwoWay}">
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding ShowInactiveAdapters, Mode=TwoWay}" AutomationProperties.Name="Show inactive network adapters">
                         <StackPanel>
                             <TextBlock Text="Show inactive network adapters" Style="{StaticResource SettingName}" />
                             <TextBlock Text="Include disconnected and virtual adapters that have carried no traffic." Style="{StaticResource SettingHelp}" />
@@ -148,7 +158,7 @@
                             <TextBlock Text="Hardware report" Style="{StaticResource SettingName}" />
                             <TextBlock Text="Save the inventory and every sensor reading to a text file, for records or troubleshooting." Style="{StaticResource SettingHelp}" />
                         </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource Btn}" Command="{Binding ExportReportCommand}" Margin="20,0,0,0" VerticalAlignment="Center">
+                        <Button Grid.Column="1" Style="{StaticResource Btn}" Command="{Binding ExportReportCommand}" Margin="20,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="Save report">
                             <StackPanel Orientation="Horizontal">
                                 <c:Icon Width="14" Height="14" Data="{StaticResource Icon.Export}" StrokeThickness="2" VerticalAlignment="Center" />
                                 <TextBlock Text="Save report…" Margin="8,0,0,0" />
@@ -167,7 +177,7 @@
                             <TextBlock Text="Minimum and maximum values" Style="{StaticResource SettingName}" />
                             <TextBlock Text="Recorded since HardwareCenter started. Reset to begin again from the current readings." Style="{StaticResource SettingHelp}" />
                         </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource Btn}" Command="{Binding ResetRangesCommand}" Margin="20,0,0,0" VerticalAlignment="Center">
+                        <Button Grid.Column="1" Style="{StaticResource Btn}" Command="{Binding ResetRangesCommand}" Margin="20,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="Reset min / max">
                             <StackPanel Orientation="Horizontal">
                                 <c:Icon Width="13" Height="13" Data="{StaticResource Icon.Reset}" StrokeThickness="2.1" VerticalAlignment="Center" />
                                 <TextBlock Text="Reset min / max" Margin="8,0,0,0" />

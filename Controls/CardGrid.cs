@@ -165,3 +165,35 @@ public sealed class WholePercentConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => Binding.DoNothing;
 }
+
+/// <summary>
+/// Lets its child fill the available width up to a limit and keeps it at the left edge beyond that,
+/// so pages stay readable on very wide or maximized windows instead of stretching edge to edge.
+/// </summary>
+public sealed class WidthCap : Decorator
+{
+    public static readonly DependencyProperty MaxContentWidthProperty = DependencyProperty.Register(
+        nameof(MaxContentWidth), typeof(double), typeof(WidthCap),
+        new FrameworkPropertyMetadata(1500.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public double MaxContentWidth
+    {
+        get => (double)GetValue(MaxContentWidthProperty);
+        set => SetValue(MaxContentWidthProperty, value);
+    }
+
+    protected override Size MeasureOverride(Size constraint)
+    {
+        if (Child == null)
+            return default;
+
+        Child.Measure(new Size(Math.Min(constraint.Width, MaxContentWidth), constraint.Height));
+        return Child.DesiredSize;
+    }
+
+    protected override Size ArrangeOverride(Size arrangeSize)
+    {
+        Child?.Arrange(new Rect(0, 0, Math.Min(arrangeSize.Width, MaxContentWidth), arrangeSize.Height));
+        return arrangeSize;
+    }
+}

@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:HardwareCenter.ViewModels">
 
     <ScrollViewer Style="{StaticResource PageScroll}">
+        <c:WidthCap>
         <StackPanel Margin="28,4,18,28">
 
             <TextBlock Text="Reading system information…" Style="{StaticResource T.Body}" Margin="0,8,0,0"
@@ -61,5 +62,6 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </StackPanel>
+        </c:WidthCap>
     </ScrollViewer>
 </UserControl>

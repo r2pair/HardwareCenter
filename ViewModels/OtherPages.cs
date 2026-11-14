@@ -452,6 +452,22 @@ public sealed class SettingsVM : ObservableObject
         }
     }
 
+    /// <summary>Ease gauges and meters toward new values instead of jumping to them.</summary>
+    public bool AnimateGauges
+    {
+        get => _settings.AnimateGauges;
+        set
+        {
+            if (_settings.AnimateGauges == value)
+                return;
+
+            _settings.AnimateGauges = value;
+            _settings.Save();
+            Controls.AnimatedMeter.AnimationsEnabled = value;
+            Raise();
+        }
+    }
+
     /// <summary>Keep an icon in the notification area and hide the window there when minimized.</summary>
     public bool MinimizeToTray
     {

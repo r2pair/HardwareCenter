@@ -93,6 +93,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Settings = settings;
         Context = new MonitorContext(settings);
         SensorFormat.UseFahrenheit = settings.UseFahrenheit;
+        Controls.AnimatedMeter.AnimationsEnabled = settings.AnimateGauges;
 
         RestartAsAdminCommand = new RelayCommand(RestartAsAdministrator);
         InstallDriverCommand = new RelayCommand(() => _ = InstallDriverAsync());
